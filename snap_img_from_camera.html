@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <video id="video" width="640" height="480" autoplay></video>
+    <button id="snap">촬영</button>
+    <canvas id="canvas" width="640" height="480"></canvas>
+
+    <script>
+      const video = document.getElementById("video");
+      const constraints = {
+        audio: false,
+        video: true,
+      };
+      const canvas = document.getElementById("canvas");
+      const context = canvas.getContext("2d");
+      const snap = document.getElementById("snap");
+
+      // 사용자의 카메라 접근
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices
+          .getUserMedia(constraints)
+          .then((stream) => {
+            const videoTracks = stream.getVideoTracks();
+            console.log("Got stream with constraints:", constraints);
+            console.log(`Using video device: ${videoTracks[0].label}`);
+            stream.onremovetrack = () => {
+              console.log("Stream ended");
+            };
+            video.srcObject = stream;
+          })
+          .catch((error) => {
+            if (error.name === "OverconstrainedError") {
+              console.error(
+                `The resolution ${constraints.video.width.exact}x${constraints.video.height.exact} px is not supported by your device.`
+              );
+            } else if (error.name === "NotAllowedError") {
+              console.error(
+                "You need to grant this page permission to access your camera and microphone."
+              );
+            } else {
+              console.error(`getUserMedia error: ${error.name}`, error);
+            }
+          });
+      }
+
+      // 촬영 버튼 클릭 시 비디오의 현재 프레임을 canvas에 그리기
+      snap.addEventListener("click", function () {
+        context.drawImage(video, 0, 0, 640, 480);
+        canvas.toBlob(async (blob) => {
+          const newImg = document.createElement("img");
+          const url = URL.createObjectURL(blob);
+          console.log(blob);
+          console.log(await blob.arrayBuffer());
+          console.log(url);
+
+          newImg.onload = () => {
+            // no longer need to read the blob so it's revoked
+            URL.revokeObjectURL(url);
+          };
+
+          newImg.src = url;
+          document.body.appendChild(newImg);
+        });
+        // console.log(canvas.toDataURL());
+        // console.log(canvas.toDataURL("image/jpeg"));
+      });
+    </script>
+  </body>
+</html>
